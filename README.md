@@ -19,11 +19,13 @@ A personal project for analyzing and visualizing financial data.
     ```bash
     pip install -r requirements.txt
     ```
-and
+
+
+
     ```bash
     pip install -r data/requirements.txt
     ```
-3. Run the application:
+2. Run the application:
     ```bash
     python scraper.py
     ```
