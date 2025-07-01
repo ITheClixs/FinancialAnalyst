@@ -19,6 +19,10 @@ A personal project for analyzing and visualizing financial data.
     ```bash
     pip install -r requirements.txt
     ```
+and
+    ```bash
+    pip install -r data/requirements.txt
+    ```
 3. Run the application:
     ```bash
     python scraper.py
@@ -27,7 +31,3 @@ A personal project for analyzing and visualizing financial data.
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request.
-
-## License
-
-This project is licensed under the MIT License.
