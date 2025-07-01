@@ -12,7 +12,7 @@ A personal project for analyzing and visualizing financial data.
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/yourusername/FinancialAnalyst.git
+    git clone https://github.com/ITheClixs/FinancialAnalyst.git
     cd FinancialAnalyst
     ```
 2. Install dependencies:
@@ -21,7 +21,7 @@ A personal project for analyzing and visualizing financial data.
     ```
 3. Run the application:
     ```bash
-    python main.py
+    python scraper.py
     ```
 
 ## Contributing
