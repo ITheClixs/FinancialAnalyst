@@ -19,7 +19,7 @@ def create_table():     # Ensure the database and table exist
     ''')
     conn.commit()
     conn.close()
-# Function to save stock data to the database
+# Function to save stock data to the database.
 def save_stock(symbol, name, price):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -30,15 +30,14 @@ def save_stock(symbol, name, price):
     conn.close() # Ensure the connection is closed after saving
 # Main function to run the scraping process
 async def run():
-    print("Starting scraping process...")
+    print("Starting scraping process....")
     create_table()  # ensure table exists
 # Create the database and table if they do not exist
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
 # Navigate to the Yahoo Finance Most Active Stocks page
-        print("Navigating to Yahoo Finance Most Active Stocks page...")
-        await page.goto("https://finance.yahoo.com/most-active", wait_until="networkidle", timeout=60000)
+        await page.goto("https://finance.yahoo.com/most-active", wait_until="domcontentloaded", timeout=60000)
 
         try:
             await page.locator('button:has-text("Accept all")').click(timeout=5000)
@@ -46,13 +45,27 @@ async def run():
             pass
 
         try:
-            await page.wait_for_selector('tr.simpTblRow', timeout=15000)
-        except:
-            print("Timeout waiting for table rows")
+            await page.wait_for_selector('tr.simpTblRow', timeout=20000)
+        except Exception as e:
+            print(f"Timeout waiting for table rows: {e}")       # print the error
 
         rows = await page.locator('tr.simpTblRow').all()
         print(f"Found {len(rows)} rows.")
 
+        # Debug: If no rows found, print the table HTML for debugging    # print the table HTML for debugging
+        if len(rows) == 0:
+            print("No rows found. Printing table HTML for debugging...")
+            try:
+                table = page.locator('table[data-test="most-active-table"]').first
+                table_html = await table.inner_html()
+                print(table_html)
+            except Exception as e:
+                print(f"Could not find or print the table: {e}")
+            # Print the whole page content for further debugging
+            print("--- PAGE CONTENT START ---")
+            print(await page.content())
+            print("--- PAGE CONTENT END ---")
+        # Loop through the rows and extract the data
         for row in rows:
             cells = await row.locator('td').all_text_contents() # get all text contents of the cells
             cells = [cell.strip() for cell in cells if cell.strip()]  # clean up
