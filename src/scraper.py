@@ -1,11 +1,11 @@
-import asyncio
 import sqlite3
-from playwright.async_api import async_playwright
+import time
+from playwright.sync_api import sync_playwright # Changed to sync_playwright
 
 DB_PATH = "stocks.db"
 
 def create_table():
-    """Create the stocks table if it does not exist."""
+    """Create the stocks table if it does not exist.""" 
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
@@ -30,25 +30,25 @@ def save_stock(symbol, name, price):
     conn.commit()
     conn.close()
 
-async def run():
+def run(): # Changed to def run()
     """Main function to run the scraping process."""
     print("Starting scraping process...")
     create_table()
     
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)  # Set to True for production
-        page = await browser.new_page()
+    with sync_playwright() as p: # Changed to sync_playwright
+        browser = p.chromium.launch(headless=True)  # Set to True for production
+        page = browser.new_page()
         
         try:
-            await page.goto("https://finance.yahoo.com/markets/stocks/most-active/", wait_until="domcontentloaded", timeout=120000) # Increased timeout
+            page.goto("https://finance.yahoo.com/markets/stocks/most-active/", wait_until="domcontentloaded", timeout=120000) # Increased timeout
             
-            await page.wait_for_timeout(10000) # Longer wait for dynamic content
+            page.wait_for_timeout(10000) # Longer wait for dynamic content
 
             # Wait for the table to load
-            await page.wait_for_selector('table', timeout=60000) # Generic table selector, increased timeout
+            page.wait_for_selector('table', timeout=60000) # Generic table selector, increased timeout
             
             # Get all table rows
-            rows = await page.locator('table tbody tr').all()
+            rows = page.locator('table tbody tr').all()
             print(f"Found {len(rows)} rows.")
             
             if len(rows) == 0:
@@ -58,11 +58,11 @@ async def run():
             # Extract data from each row
             for i, row in enumerate(rows[:10]):  # Limit to first 10 for testing
                 try:
-                    cells = await row.locator('td').all()
+                    cells = row.locator('td').all()
                     if len(cells) >= 3:
-                        symbol = await cells[0].inner_text()
-                        name = await cells[1].inner_text()
-                        price = await cells[3].inner_text()
+                        symbol = cells[0].inner_text()
+                        name = cells[1].inner_text()
+                        price = cells[3].inner_text()
                         
                         # Clean up the data
                         symbol = symbol.strip()
@@ -79,7 +79,7 @@ async def run():
         except Exception as e:
             print(f"Error during scraping: {e}")
         finally:
-            await browser.close()
+            browser.close()
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    run()
