@@ -66,7 +66,7 @@ async def run():
                     if len(cells) >= 3:
                         symbol = await cells[0].inner_text()
                         name = await cells[1].inner_text()
-                        price = await cells[2].inner_text()
+                        price = await cells[3].inner_text()
                         
                         # Clean up the data
                         symbol = symbol.strip()
