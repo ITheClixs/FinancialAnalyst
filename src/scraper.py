@@ -69,7 +69,7 @@ async def run():
                         name = name.strip()
                         price = price.strip()
                         
-                        print(f"{symbol} | {name} | {price}")
+                        print(f"{symbol} | {name} | Price: {price}")
                         save_stock(symbol, name, price)
                         
                 except Exception as e:
