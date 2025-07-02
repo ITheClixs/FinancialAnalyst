@@ -40,7 +40,7 @@ async def run():
         page = await browser.new_page()
         
         try:
-            await page.goto("https://finance.yahoo.com/most-active", wait_until="domcontentloaded", timeout=60000)
+            await page.goto("https://finance.yahoo.com/markets/stocks/most-active/", wait_until="domcontentloaded", timeout=60000)
             
             # Handle cookie consent
             try:
@@ -48,12 +48,15 @@ async def run():
                 await page.wait_for_timeout(2000)  # Wait for page to settle
             except:
                 pass
+
+            # Scroll to the table
+            await page.evaluate('window.scrollBy(0, 500)')
             
-            # Wait for the table to load with updated selector
-            await page.wait_for_selector('table[data-testid="table-container"]', timeout=20000)
+            # Wait for the first row of the table to be visible
+            await page.wait_for_selector('div[data-test="scr-res-table"] tbody tr:first-child', timeout=30000)
             
             # Get all table rows
-            rows = await page.locator('table[data-testid="table-container"] tbody tr').all()
+            rows = await page.locator('div[data-test="scr-res-table"] tbody tr').all()
             print(f"Found {len(rows)} rows.")
             
             if len(rows) == 0:
