@@ -1,6 +1,5 @@
-import asyncio
+import yfinance as yf
 import sqlite3
-from playwright.async_api import async_playwright
 
 DB_PATH = "stocks.db"
 
@@ -13,7 +12,7 @@ def create_table():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             symbol TEXT,
             name TEXT,
-            price TEXT,
+            price REAL,
             scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -30,69 +29,33 @@ def save_stock(symbol, name, price):
     conn.commit()
     conn.close()
 
-async def run():
+def run():
     """Main function to run the scraping process."""
     print("Starting scraping process...")
     create_table()
-    
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)  # Set to False for debugging
-        page = await browser.new_page()
-        
-        try:
-            await page.goto("https://finance.yahoo.com/markets/stocks/most-active/", wait_until="domcontentloaded", timeout=60000)
-            
-            # Handle cookie consent
-            try:
-                await page.locator('button:has-text("Accept all")').click(timeout=5000)
-                await page.wait_for_timeout(2000)  # Wait for page to settle
-            except:
-                pass
 
-            # Scroll to the table
-            await page.evaluate('window.scrollBy(0, 500)')
-            
-            # Wait for the first row of the table to be visible
-            await page.wait_for_selector('div[data-test="scr-res-table"] tbody tr:first-child', timeout=30000)
-            
-            # Get all table rows
-            rows = await page.locator('div[data-test="scr-res-table"] tbody tr').all()
-            print(f"Found {len(rows)} rows.")
-            
-            if len(rows) == 0:
-                print("No rows found. Page might have changed structure.")
-                return
-            
-            # Extract data from each row
-            for i, row in enumerate(rows[:10]):  # Limit to first 10 for testing
-                try:
-                    cells = await row.locator('td').all()
-                    if len(cells) >= 3:
-                        symbol = await cells[0].inner_text()
-                        name = await cells[1].inner_text()
-                        price = await cells[2].inner_text()
-                        
-                        # Clean up the data
-                        symbol = symbol.strip()
-                        name = name.strip()
-                        price = price.strip()
-                        
-                        print(f"{symbol} | {name} | {price}")
-                        save_stock(symbol, name, price)
-                        
-                except Exception as e:
-                    print(f"Error processing row {i}: {e}")
-                    continue
-                    
-        except Exception as e:
-            print(f"Error during scraping: {e}")
-        finally:
-            await browser.close()
+    try:
+        # Get the most active stocks
+        most_active = yf.Tickers(yf.Screener().get_screeners('most_actives')['most_actives']['quotes'])
+        
+        print(f"Found {len(most_active.tickers)} most active stocks.")
+
+        for ticker in most_active.tickers:
+            try:
+                info = ticker.info
+                symbol = info.get('symbol')
+                name = info.get('longName')
+                price = info.get('regularMarketPrice')
+
+                if symbol and name and price:
+                    print(f"{symbol} | {name} | {price}")
+                    save_stock(symbol, name, price)
+            except Exception as e:
+                print(f"Error processing ticker: {e}")
+                continue
+
+    except Exception as e:
+        print(f"Error during scraping: {e}")
 
 if __name__ == "__main__":
-    asyncio.run(run()) 
-
-
-
-
-
+    run()
