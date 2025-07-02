@@ -40,33 +40,15 @@ async def run():
         page = await browser.new_page()
         
         try:
-            await page.goto("https://finance.yahoo.com/markets/stocks/most-active/", wait_until="domcontentloaded", timeout=90000) # Increased timeout
+            await page.goto("https://finance.yahoo.com/markets/stocks/most-active/", wait_until="domcontentloaded", timeout=120000) # Increased timeout
             
-            # Handle cookie consent with multiple selectors
-            cookie_selectors = [
-                'button:has-text("Accept all")',
-                'button[name="agree"]',
-                'button[value="agree"]',
-                '#consent-page button[data-testid="agree-button"]',
-            ]
-            for selector in cookie_selectors:
-                try:
-                    await page.locator(selector).click(timeout=10000)
-                    await page.wait_for_loadstate('networkidle') # Wait for page to settle
-                    print("Cookie consent accepted.")
-                    break
-                except:
-                    pass
-            else:
-                print("No cookie consent button found or could not be clicked.")
-            
-            await page.wait_for_timeout(5000) # Additional wait for dynamic content
+            await page.wait_for_timeout(10000) # Longer wait for dynamic content
 
-            # Wait for the table body to load, which indicates data presence
-            await page.wait_for_selector('div[data-test="scr-res-table"] tbody', timeout=60000) # Increased timeout
+            # Wait for the table to load
+            await page.wait_for_selector('table', timeout=60000) # Generic table selector, increased timeout
             
             # Get all table rows
-            rows = await page.locator('div[data-test="scr-res-table"] tbody tr').all()
+            rows = await page.locator('table tbody tr').all()
             print(f"Found {len(rows)} rows.")
             
             if len(rows) == 0:
@@ -77,6 +59,10 @@ async def run():
             for i, row in enumerate(rows[:10]):  # Limit to first 10 for testing
                 try:
                     cells = await row.locator('td').all()
+                    print(f"Number of cells: {len(cells)}")
+                    for j, cell in enumerate(cells):
+                        print(f"Cell {j}: {await cell.inner_text()}")
+                    
                     if len(cells) >= 3:
                         symbol = await cells[0].inner_text()
                         name = await cells[1].inner_text()
