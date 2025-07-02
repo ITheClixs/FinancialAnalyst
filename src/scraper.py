@@ -4,7 +4,7 @@ from playwright.async_api import async_playwright
 
 DB_PATH = "stocks.db"
 
-def create_table():     # Ensure the database and table exist
+def create_table():
     """Create the stocks table if it does not exist."""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -19,68 +19,75 @@ def create_table():     # Ensure the database and table exist
     ''')
     conn.commit()
     conn.close()
-# Function to save stock data to the database.
+
 def save_stock(symbol, name, price):
+    """Save stock data to the database."""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
         INSERT INTO stocks (symbol, name, price) VALUES (?, ?, ?)
     ''', (symbol, name, price))
     conn.commit()
-    conn.close() # Ensure the connection is closed after saving
-# Main function to run the scraping process
+    conn.close()
+
 async def run():
-    print("Starting scraping process....")
-    create_table()  # ensure table exists
-# Create the database and table if they do not exist
+    """Main function to run the scraping process."""
+    print("Starting scraping process...")
+    create_table()
+    
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(headless=False)  # Set to False for debugging
         page = await browser.new_page()
-# Navigate to the Yahoo Finance Most Active Stocks page
-        await page.goto("https://finance.yahoo.com/most-active", wait_until="domcontentloaded", timeout=60000)
-
+        
         try:
-            await page.locator('button:has-text("Accept all")').click(timeout=5000)
-        except:
-            pass
-
-        try:
-            await page.wait_for_selector('tr.simpTblRow', timeout=20000)
-        except Exception as e:
-            print(f"Timeout waiting for table rows: {e}")       # print the error
-
-        rows = await page.locator('tr.simpTblRow').all()
-        print(f"Found {len(rows)} rows.")
-
-        # Debug: If no rows found, print the table HTML for debugging    # print the table HTML for debugging
-        if len(rows) == 0:
-            print("No rows found. Printing table HTML for debugging...")
+            await page.goto("https://finance.yahoo.com/most-active", wait_until="domcontentloaded", timeout=60000)
+            
+            # Handle cookie consent
             try:
-                table = page.locator('table[data-test="most-active-table"]').first
-                table_html = await table.inner_html()
-                print(table_html)
-            except Exception as e:
-                print(f"Could not find or print the table: {e}")
-            # Print the whole page content for further debugging
-            print("--- PAGE CONTENT START ---")
-            print(await page.content())
-            print("--- PAGE CONTENT END ---")
-        # Loop through the rows and extract the data
-        for row in rows:
-            cells = await row.locator('td').all_text_contents() # get all text contents of the cells
-            cells = [cell.strip() for cell in cells if cell.strip()]  # clean up
-            # Ensure there are enough cells to extract data
-            if len(cells) >= 3:
-                symbol = cells[0]
-                name = cells[1]
-                price = cells[2]
-                print(f"{symbol} | {name} | {price}")
+                await page.locator('button:has-text("Accept all")').click(timeout=5000)
+                await page.wait_for_timeout(2000)  # Wait for page to settle
+            except:
+                pass
+            
+            # Wait for the table to load with updated selector
+            await page.wait_for_selector('table[data-testid="table-container"]', timeout=20000)
+            
+            # Get all table rows
+            rows = await page.locator('table[data-testid="table-container"] tbody tr').all()
+            print(f"Found {len(rows)} rows.")
+            
+            if len(rows) == 0:
+                print("No rows found. Page might have changed structure.")
+                return
+            
+            # Extract data from each row
+            for i, row in enumerate(rows[:10]):  # Limit to first 10 for testing
+                try:
+                    cells = await row.locator('td').all()
+                    if len(cells) >= 3:
+                        symbol = await cells[0].inner_text()
+                        name = await cells[1].inner_text()
+                        price = await cells[2].inner_text()
+                        
+                        # Clean up the data
+                        symbol = symbol.strip()
+                        name = name.strip()
+                        price = price.strip()
+                        
+                        print(f"{symbol} | {name} | {price}")
+                        save_stock(symbol, name, price)
+                        
+                except Exception as e:
+                    print(f"Error processing row {i}: {e}")
+                    continue
+                    
+        except Exception as e:
+            print(f"Error during scraping: {e}")
+        finally:
+            await browser.close()
 
-                save_stock(symbol, name, price)  # save to DB 
-
-        await browser.close()
-
-asyncio.run(run()) 
+if __name__ == "__main__":
+    asyncio.run(run()) 
 
 
 
