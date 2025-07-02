@@ -59,10 +59,6 @@ async def run():
             for i, row in enumerate(rows[:10]):  # Limit to first 10 for testing
                 try:
                     cells = await row.locator('td').all()
-                    print(f"Number of cells: {len(cells)}")
-                    for j, cell in enumerate(cells):
-                        print(f"Cell {j}: {await cell.inner_text()}")
-                    
                     if len(cells) >= 3:
                         symbol = await cells[0].inner_text()
                         name = await cells[1].inner_text()
