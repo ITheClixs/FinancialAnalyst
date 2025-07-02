@@ -36,7 +36,17 @@ def get_stocks():
 def trigger_scrape():
     # Run the scraping in a separate thread to avoid blocking the Flask app
     # Note: For production, consider a proper task queue (e.g., Celery)
-    threading.Thread(target=lambda: asyncio.run(scrape_run())).start()
+    def run_scraper_in_thread():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        coroutine = scrape_run()
+        if asyncio.iscoroutine(coroutine):
+            loop.run_until_complete(coroutine)
+        else:
+            # If scrape_run is not async, just call it directly
+            scrape_run()
+        loop.close()
+    threading.Thread(target=run_scraper_in_thread).start()
     return jsonify({'message': 'Scraping initiated!'}), 202
 
 if __name__ == '__main__':
