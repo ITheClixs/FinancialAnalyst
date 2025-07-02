@@ -25,7 +25,7 @@ def save_stock(symbol, name, price):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
-        INSERT INTO stocks (symbol, name, price) VALUES (?, ?, ?)
+        INSERT INTO stocks (symbol, name, price) VALUES (?, ?, ?) 
     ''', (symbol, name, price))
     conn.commit()
     conn.close()
@@ -40,25 +40,30 @@ async def run():
         page = await browser.new_page()
         
         try:
-            await page.goto("https://finance.yahoo.com/markets/stocks/most-active/", wait_until="domcontentloaded", timeout=60000)
+            await page.goto("https://finance.yahoo.com/markets/stocks/most-active/", wait_until="domcontentloaded", timeout=90000) # Increased timeout
             
-            # Handle cookie consent
-            try:
-                await page.locator('button:has-text("Accept all")').click(timeout=5000)
-                await page.wait_for_timeout(2000)  # Wait for page to settle
-            except:
-                pass
-
-            # Scroll to the table
-            await page.evaluate('window.scrollBy(0, 500)')
-            await page.wait_for_timeout(10000) # Wait for page to load
-
-            html = await page.content()
-            with open("page_content.html", "w") as f:
-                f.write(html)
+            # Handle cookie consent with multiple selectors
+            cookie_selectors = [
+                'button:has-text("Accept all")',
+                'button[name="agree"]',
+                'button[value="agree"]',
+                '#consent-page button[data-testid="agree-button"]',
+            ]
+            for selector in cookie_selectors:
+                try:
+                    await page.locator(selector).click(timeout=10000)
+                    await page.wait_for_loadstate('networkidle') # Wait for page to settle
+                    print("Cookie consent accepted.")
+                    break
+                except:
+                    pass
+            else:
+                print("No cookie consent button found or could not be clicked.")
             
-            # Wait for the table to load with updated selector
-            await page.wait_for_selector('div[data-test="scr-res-table"]', timeout=20000)
+            await page.wait_for_timeout(5000) # Additional wait for dynamic content
+
+            # Wait for the table body to load, which indicates data presence
+            await page.wait_for_selector('div[data-test="scr-res-table"] tbody', timeout=60000) # Increased timeout
             
             # Get all table rows
             rows = await page.locator('div[data-test="scr-res-table"] tbody tr').all()
@@ -95,9 +100,4 @@ async def run():
             await browser.close()
 
 if __name__ == "__main__":
-    asyncio.run(run()) 
-
-
-
-
-
+    asyncio.run(run())
