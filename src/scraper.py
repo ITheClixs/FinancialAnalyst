@@ -36,7 +36,7 @@ async def run():
     create_table()
     
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)  # Set to False for debugging
+        browser = await p.chromium.launch(headless=True)  # Set to True for production
         page = await browser.new_page()
         
         try:
