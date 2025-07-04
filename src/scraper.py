@@ -2,7 +2,9 @@ import sqlite3
 import time
 from playwright.sync_api import sync_playwright # Changed to sync_playwright
 
-DB_PATH = "stocks.db"
+from config import Config
+
+DB_PATH = Config.DB_PATH
 
 def create_table():
     """Create the stocks table if it does not exist.""" 
