@@ -83,3 +83,40 @@ def run(): # Changed to def run()
 
 if __name__ == "__main__":
     run()
+
+def scrape_stock_details(symbol):
+    """Scrape news and analysis for a given stock symbol."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        
+        try:
+            page.goto(f"https://finance.yahoo.com/quote/{symbol}", wait_until="domcontentloaded", timeout=120000)
+            page.wait_for_timeout(10000)
+
+            # Scrape news
+            news_headlines = []
+            news_items = page.locator('li.js-stream-content').all()
+            for item in news_items[:5]: # Get top 5 news
+                headline = item.locator('h3').inner_text()
+                link = item.locator('a').get_attribute('href')
+                news_headlines.append({"headline": headline, "link": link})
+
+            # Scrape analysis
+            analysis = {}
+            # This is a placeholder for more complex analysis scraping
+            # For now, we'll just get some key stats
+            pe_ratio = page.locator('td[data-test="PE_RATIO-value"]').inner_text()
+            eps = page.locator('td[data-test="EPS_RATIO-value"]').inner_text()
+            market_cap = page.locator('td[data-test="MARKET_CAP-value"]').inner_text()
+            analysis["pe_ratio"] = pe_ratio
+            analysis["eps"] = eps
+            analysis["market_cap"] = market_cap
+
+            return {"news": news_headlines, "analysis": analysis}
+
+        except Exception as e:
+            print(f"Error scraping details for {symbol}: {e}")
+            return None
+        finally:
+            browser.close()
