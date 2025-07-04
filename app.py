@@ -2,7 +2,7 @@ from flask import Flask, render_template, jsonify
 import sqlite3
 import threading
 import asyncio
-from src.scraper import run as scrape_run, DB_PATH, create_table
+from src.scraper import run as scrape_run, DB_PATH, create_table, scrape_stock_details
 
 app = Flask(__name__)
 
@@ -33,6 +33,14 @@ def get_stocks():
             'graph_url': f"https://finviz.com/chart.ashx?t={stock[0]}&ty=c&ta=1&p=d&s=l"
         })
     return jsonify(stock_list)
+
+@app.route('/api/stock/<symbol>')
+def get_stock_details(symbol):
+    details = scrape_stock_details(symbol)
+    if details:
+        return jsonify(details)
+    else:
+        return jsonify({"error": "Could not fetch details"}), 404
 
 @app.route('/api/scrape', methods=['POST'])
 def trigger_scrape():
