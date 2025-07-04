@@ -1,23 +1,35 @@
 document.addEventListener('DOMContentLoaded', function() {
     const scrapeButton = document.getElementById('scrape-button');
     const messageDiv = document.getElementById('message');
-    const stocksTableBody = document.querySelector('#stocks-table tbody');
+    const stocksGrid = document.getElementById('stocks-grid');
 
     function fetchStocks() {
         fetch('/api/stocks')
             .then(response => response.json())
             .then(data => {
-                stocksTableBody.innerHTML = ''; // Clear existing rows
+                stocksGrid.innerHTML = ''; // Clear existing cards
                 if (data.length === 0) {
-                    stocksTableBody.innerHTML = '<tr><td colspan="4">No stock data available. Scrape to get data.</td></tr>';
+                    stocksGrid.innerHTML = '<p>No stock data available. Scrape to get data.</p>';
                     return;
                 }
                 data.forEach(stock => {
-                    const row = stocksTableBody.insertRow();
-                    row.insertCell().textContent = stock.symbol;
-                    row.insertCell().textContent = stock.name;
-                    row.insertCell().textContent = stock.price;
-                    row.insertCell().textContent = stock.scraped_at;
+                    const card = document.createElement('div');
+                    card.className = 'stock-card';
+
+                    card.innerHTML = `
+                        <div class="stock-header">
+                            <img src="${stock.logo_url}" alt="${stock.name} logo" class="stock-logo">
+                            <div class="stock-info">
+                                <h2>${stock.symbol}</h2>
+                                <p>${stock.name}</p>
+                            </div>
+                        </div>
+                        <div class="stock-price">$${stock.price}</div>
+                        <div class="stock-graph">
+                            <img src="${stock.graph_url}" alt="${stock.name} graph">
+                        </div>
+                    `;
+                    stocksGrid.appendChild(card);
                 });
             })
             .catch(error => {
@@ -29,24 +41,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     scrapeButton.addEventListener('click', function() {
         messageDiv.textContent = 'Scraping in progress...';
-        messageDiv.style.color = 'orange';
+        messageDiv.style.color = '#bf9fee';
         fetch('/api/scrape', {
             method: 'POST'
         })
         .then(response => response.json())
         .then(data => {
             messageDiv.textContent = data.message;
-            messageDiv.style.color = 'green';
-            // Optionally, refresh stocks after a delay to allow scraping to complete
+            messageDiv.style.color = '#50fa7b';
             setTimeout(fetchStocks, 5000); 
         })
         .catch(error => {
             console.error('Error triggering scrape:', error);
             messageDiv.textContent = 'Error triggering scrape.';
-            messageDiv.style.color = 'red';
+            messageDiv.style.color = '#ff5555';
         });
     });
 
-    // Initial fetch when the page loads
     fetchStocks();
 });
