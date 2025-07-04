@@ -2,6 +2,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const scrapeButton = document.getElementById('scrape-button');
     const messageDiv = document.getElementById('message');
     const stocksGrid = document.getElementById('stocks-grid');
+    const modal = document.getElementById('stock-modal');
+    const modalBody = document.getElementById('modal-body');
+    const closeButton = document.querySelector('.close-button');
 
     function fetchStocks() {
         fetch('/api/stocks')
@@ -15,6 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 data.forEach(stock => {
                     const card = document.createElement('div');
                     card.className = 'stock-card';
+                    card.dataset.symbol = stock.symbol;
 
                     card.innerHTML = `
                         <div class="stock-header">
@@ -56,6 +60,57 @@ document.addEventListener('DOMContentLoaded', function() {
             messageDiv.textContent = 'Error triggering scrape.';
             messageDiv.style.color = '#ff5555';
         });
+    });
+
+    stocksGrid.addEventListener('click', function(event) {
+        const card = event.target.closest('.stock-card');
+        if (card) {
+            const symbol = card.dataset.symbol;
+            openModal(symbol);
+        }
+    });
+
+    function openModal(symbol) {
+        modalBody.innerHTML = '<p>Loading...</p>';
+        modal.style.display = 'block';
+
+        fetch(`/api/stock/${symbol}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    modalBody.innerHTML = `<p>${data.error}</p>`;
+                    return;
+                }
+
+                const newsList = data.news.map(item => `<li><a href="${item.link}" target="_blank">${item.headline}</a></li>`).join('');
+                const analysisList = Object.entries(data.analysis).map(([key, value]) => `<li><strong>${key.replace('_', ' ').toUpperCase()}:</strong> ${value}</li>`).join('');
+
+                modalBody.innerHTML = `
+                    <div class="stock-graph-large">
+                        <img src="https://finviz.com/chart.ashx?t=${symbol}&ty=c&ta=1&p=d&s=l" alt="${symbol} graph">
+                    </div>
+                    <div>
+                        <h2>Latest News</h2>
+                        <ul class="stock-news">${newsList}</ul>
+                        <h2>Analysis</h2>
+                        <ul class="stock-analysis">${analysisList}</ul>
+                    </div>
+                `;
+            })
+            .catch(error => {
+                console.error('Error fetching stock details:', error);
+                modalBody.innerHTML = '<p>Error fetching stock details.</p>';
+            });
+    }
+
+    closeButton.addEventListener('click', function() {
+        modal.style.display = 'none';
+    });
+
+    window.addEventListener('click', function(event) {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
     });
 
     fetchStocks();
