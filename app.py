@@ -28,7 +28,9 @@ def get_stocks():
             'symbol': stock[0],
             'name': stock[1],
             'price': stock[2],
-            'scraped_at': stock[3]
+            'scraped_at': stock[3],
+            'logo_url': f"https://logo.clearbit.com/{stock[1].replace(' ', '').replace('.', '')}.com",
+            'graph_url': f"https://finviz.com/chart.ashx?t={stock[0]}&ty=c&ta=1&p=d&s=l"
         })
     return jsonify(stock_list)
 
