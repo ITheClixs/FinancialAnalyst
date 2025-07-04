@@ -96,22 +96,28 @@ def scrape_stock_details(symbol):
 
             # Scrape news
             news_headlines = []
-            news_items = page.locator('li.js-stream-content').all()
+            news_items = page.locator('div[data-test-locator="mega-stream"] ul > li').all()
             for item in news_items[:5]: # Get top 5 news
-                headline = item.locator('h3').inner_text()
-                link = item.locator('a').get_attribute('href')
-                news_headlines.append({"headline": headline, "link": link})
+                try:
+                    headline = item.locator('h3').inner_text()
+                    link = item.locator('a').get_attribute('href')
+                    news_headlines.append({"headline": headline, "link": f"https://finance.yahoo.com{link}"})
+                except Exception:
+                    continue
 
             # Scrape analysis
             analysis = {}
-            # This is a placeholder for more complex analysis scraping
-            # For now, we'll just get some key stats
-            pe_ratio = page.locator('td[data-test="PE_RATIO-value"]').inner_text()
-            eps = page.locator('td[data-test="EPS_RATIO-value"]').inner_text()
-            market_cap = page.locator('td[data-test="MARKET_CAP-value"]').inner_text()
-            analysis["pe_ratio"] = pe_ratio
-            analysis["eps"] = eps
-            analysis["market_cap"] = market_cap
+            def get_stat(label):
+                try:
+                    return page.locator(f'//span[text()="{label}"]/../following-sibling::span').inner_text()
+                except Exception:
+                    return "N/A"
+
+            analysis["Market Cap"] = get_stat("Market Cap")
+            analysis["PE Ratio (TTM)"] = get_stat("PE Ratio (TTM)")
+            analysis["EPS (TTM)"] = get_stat("EPS (TTM)")
+            analysis["Forward Dividend & Yield"] = get_stat("Forward Dividend & Yield")
+
 
             return {"news": news_headlines, "analysis": analysis}
 
